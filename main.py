@@ -6,6 +6,8 @@ EMPTY_SYMBOL = '11'
 DIR_RIGHT = '1'
 DIR_LEFT = '11'
 
+MAX_LOOPS = 1000
+MAX_TAPE_SIZE = 1000
 
 def main():
     mt_input = input('Insira a MT: ')
@@ -17,25 +19,26 @@ def process_mt(mt_input):
     tape_one, tape_two, tape_three = initialize_tapes(mt_input)
 
     cont = 0
-    finished = False
     approved = False
     tape_two_head = 0
-    index_tape_two = 1
-    while cont < 1000 and not finished:
-        r_a = get_corresponding_symbol(tape_two, tape_two_head)
-        r_e = remove_initial_and_final_symbols(tape_three)
-        transition_index = find_transition(tape_one, r_e, r_a)
-        if r_a == EMPTY_SYMBOL or transition_index == -1:
-            finished = True
-            approved = is_final_state(tape_one, r_e)
+    while cont < MAX_LOOPS:
+        current_symbol = get_corresponding_symbol(tape_two, tape_two_head)
+        current_state = remove_initial_and_final_symbols(tape_three)
+        transition_index = find_transition(tape_one, current_state, current_symbol)
+
+        if current_symbol == EMPTY_SYMBOL or transition_index == -1:
+            approved = is_final_state(tape_one, current_state)
+            break
         else:
             new_state, new_symbol, direction = get_transition_info(tape_one, transition_index)
-            tape_three = INITIAL_SYMBOL + new_state + EMPTY_SYMBOL
-            index_tape_two, tape_two = update_tape_two(r_a, tape_two, index_tape_two, new_symbol)
+            tape_three = update_tape_three(new_state)
+            tape_two = update_tape_two(tape_two, tape_two_head, new_symbol)
             tape_two_head = move_tape_two(tape_two_head, direction)
+            if len(tape_two) >= MAX_TAPE_SIZE:
+                return 'Rejeitada -> excedeu o tamanho da fita ' + str(cont) 
         cont += 1
-
-    return 'Aprovada' if approved else 'Rejeitada -> entrou em loop' if cont == 1000 else 'Rejeitada'
+    
+    return 'Aprovada' if approved else 'Rejeitada -> entrou em loop' if cont == MAX_LOOPS else 'Rejeitada'
 
 
 def initialize_tapes(mt_input):
@@ -66,12 +69,12 @@ def is_final_state(tape_one, state):
     return state in final_states
 
 
-def get_corresponding_symbol(word, symbol_count):
+def get_corresponding_symbol(word, tape_two_head):
     word = remove_initial_and_final_symbols(word)
     symbols = word.split('0')
-    if symbol_count >= len(symbols):
+    if tape_two_head >= len(symbols):
         return EMPTY_SYMBOL
-    return symbols[symbol_count]
+    return symbols[tape_two_head]
 
 
 def remove_initial_and_final_symbols(tape):
@@ -85,10 +88,16 @@ def move_tape_two(symbol_count, direction):
         return symbol_count - 1
 
 
-def update_tape_two(r_a, tape_two, index_tape_two, new_symbol):
-    index_tape_two += len(r_a)+1
-    tape_two = tape_two[:index_tape_two] + new_symbol + tape_two[index_tape_two+len(r_a):]
-    return index_tape_two, tape_two
+def update_tape_three(new_state):
+    return INITIAL_SYMBOL + new_state + EMPTY_SYMBOL
+
+
+def update_tape_two(tape_two, tape_two_head, new_symbol):
+    tape_two = remove_initial_and_final_symbols(tape_two)
+    symbols = tape_two.split('0')
+    symbols[tape_two_head] = new_symbol
+    tape_two = '0'.join(symbols)
+    return INITIAL_SYMBOL + tape_two + EMPTY_SYMBOL
 
 
 if __name__ == "__main__":
